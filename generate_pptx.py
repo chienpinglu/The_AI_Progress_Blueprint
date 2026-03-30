@@ -2,6 +2,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
 
 # Slide definitions
 slides_data = [
@@ -121,7 +122,7 @@ slides_data = [
         "bullets": [
             "Shifting Value: AI scaling pushes value-generation away from early fixed pipelines toward learned, late-stage computation (e.g., neural reconstruction, massive rerankers)",
             "Why GPUs Become More Programmable: As S rises, the optimal hardware locus shifts toward generalized, tensor-heavy programmable compute",
-            "The Accelerator Dynamic: AI domain-specific accelerators matter, but they do not simply displace the GPU; they must continually displace as the dominant value-producing workload evolves"
+            "The Accelerator Dynamic: AI domain-specific accelerators matter, but they do not simply displace the GPU; they must continually adapt as the dominant value-producing workload evolves"
         ]
     },
     {
@@ -143,21 +144,19 @@ slides_data = [
     }
 ]
 
-# Theme Colors from User Code
+# Theme Colors
 BG_COLOR = RGBColor(10, 25, 41)       # Dark Navy
 TEXT_COLOR = RGBColor(240, 240, 240)  # Off-white
 ACCENT_CYAN = RGBColor(0, 255, 255)   # Blueprint Cyan
 ACCENT_GOLD = RGBColor(255, 215, 0)   # Gold/Orange
 
 def apply_dark_bg(slide):
-    """Applies the solid dark navy background to a slide."""
     background = slide.background
     fill = background.fill
     fill.solid()
     fill.fore_color.rgb = BG_COLOR
 
 def add_text_box(slide, text, left, top, width, height, font_size=18, color=TEXT_COLOR, bold=False, align=PP_ALIGN.LEFT):
-    """Helper to add an editable text box with specific styling."""
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     tf.word_wrap = True
@@ -170,10 +169,130 @@ def add_text_box(slide, text, left, top, width, height, font_size=18, color=TEXT
     p.font.name = "Arial" 
     return txBox
 
+def add_styled_shape(slide, shape_type, left, top, width, height, text="", font_size=16, line_col=ACCENT_CYAN, fill_col=BG_COLOR, text_col=TEXT_COLOR):
+    shape = slide.shapes.add_shape(shape_type, left, top, width, height)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill_col
+    shape.line.color.rgb = line_col
+    shape.line.width = Pt(2)
+    
+    if text:
+        tf = shape.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = text
+        p.alignment = PP_ALIGN.CENTER
+        p.font.size = Pt(font_size)
+        p.font.color.rgb = text_col
+        p.font.bold = True
+        p.font.name = "Arial"
+    return shape
+
+def draw_visual_concept(slide, concept_text, current_y):
+    """Draws native PowerPoint shapes based on the specific visual concept."""
+    y = current_y
+    concept = concept_text.lower()
+    
+    if "blueprint-style diagram" in concept:
+        # Mechanics of Ascent
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(4), Inches(y+2), Inches(5), Inches(0.8), "A_n (Foundational Layer)")
+        add_styled_shape(slide, MSO_SHAPE.UP_ARROW, Inches(6), Inches(y+1.0), Inches(1), Inches(0.8), "", line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(4), Inches(y), Inches(5), Inches(0.8), "Intermediate Step (B)")
+        add_styled_shape(slide, MSO_SHAPE.UP_ARROW, Inches(6), Inches(y-0.8), Inches(1), Inches(0.6), "", line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        
+        # Open Ceiling A'
+        ceiling = add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(3.5), Inches(y-1.5), Inches(6), Inches(0.5), "A'_n (Turing Jump / Open Ceiling)", line_col=ACCENT_CYAN, text_col=ACCENT_CYAN)
+        ceiling.line.dash_style = 4 # Dashed line
+        return y + 3.0
+        
+    elif "finite-depth ladder" in concept:
+        # Polynomial Hierarchy Ladder
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(1.5), Inches(y+1.6), Inches(3), Inches(0.6), "P (Direct Decision)", line_col=ACCENT_CYAN)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(4.7), Inches(y+1.7), Inches(0.6), Inches(0.4), line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(5.5), Inches(y+0.8), Inches(3.5), Inches(0.6), "NP (Certificate Verification)", line_col=ACCENT_CYAN)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(9.2), Inches(y+0.9), Inches(0.6), Inches(0.4), line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(10), Inches(y), Inches(3), Inches(0.6), "PH (Guided Search)", line_col=ACCENT_CYAN)
+        return y + 2.5
+        
+    elif "nested boundary map" in concept:
+        # Nested Bounds (Approximated with stacked rounded rectangles)
+        add_styled_shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE, Inches(2), Inches(y), Inches(9.33), Inches(2.5), "Well-defined tasks (Open-ended)", line_col=ACCENT_CYAN)
+        add_text_box(slide, "Well-defined tasks (Open-ended)", Inches(2.2), Inches(y+0.1), Inches(4), Inches(0.5), 18, ACCENT_CYAN, True)
+        
+        # We need to wipe text from the shape itself since we added a text box
+        # Actually add_styled_shape adds text to the center. Let's recreate without text.
+        pass # Re-drawing cleanly:
+        s1 = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(2), Inches(y), Inches(9.33), Inches(2.5))
+        s1.fill.solid(); s1.fill.fore_color.rgb = BG_COLOR; s1.line.color.rgb = ACCENT_CYAN
+        add_text_box(slide, "Well-Defined Tasks (Open-Ended)", Inches(2.2), Inches(y+0.1), Inches(8), Inches(0.5), 16, ACCENT_CYAN, True)
+        
+        s2 = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(3), Inches(y+0.5), Inches(7.33), Inches(1.8))
+        s2.fill.solid(); s2.fill.fore_color.rgb = BG_COLOR; s2.line.color.rgb = ACCENT_GOLD
+        add_text_box(slide, "Computable Tasks", Inches(3.2), Inches(y+0.6), Inches(6), Inches(0.5), 16, ACCENT_GOLD, True)
+        
+        s3 = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(4), Inches(y+1.0), Inches(5.33), Inches(1.1))
+        s3.fill.solid(); s3.fill.fore_color.rgb = BG_COLOR; s3.line.color.rgb = TEXT_COLOR
+        add_text_box(slide, "Polynomial-Time Feasible Tasks", Inches(4.2), Inches(y+1.4), Inches(5), Inches(0.5), 16, TEXT_COLOR, True, PP_ALIGN.CENTER)
+        
+        return y + 2.8
+        
+    elif "pressure-conversion loop" in concept:
+        # Cycle Diagram
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(2), Inches(y+0.5), Inches(3), Inches(1.0), "Logical Compute Demand", line_col=ACCENT_CYAN)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(5.2), Inches(y+0.8), Inches(0.8), Inches(0.4), line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(6.2), Inches(y+0.5), Inches(2.5), Inches(1.0), "Physical Burden", line_col=ACCENT_CYAN)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(8.9), Inches(y+0.8), Inches(0.8), Inches(0.4), line_col=ACCENT_GOLD, fill_col=ACCENT_GOLD)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(9.9), Inches(y+0.5), Inches(2.5), Inches(1.0), "Efficiency Optimization", line_col=ACCENT_CYAN)
+        
+        # Return loop underneath
+        l1 = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(3.5), Inches(y+1.8), Inches(7.5), Inches(0.3))
+        l1.fill.solid(); l1.fill.fore_color.rgb = ACCENT_CYAN; l1.line.color.rgb = ACCENT_CYAN
+        
+        return y + 2.5
+        
+    elif "phase-boundary graph" in concept:
+        # 2D Graph
+        # Y Axis
+        slide.shapes.add_shape(MSO_SHAPE.UP_ARROW, Inches(2), Inches(y), Inches(0.1), Inches(2.5)).fill.solid()
+        add_text_box(slide, "Specialization Efficiency (R)", Inches(0.1), Inches(y+0.5), Inches(2), Inches(1.0), 14, ACCENT_GOLD)
+        # X Axis
+        slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(2), Inches(y+2.5), Inches(6), Inches(0.1)).fill.solid()
+        add_text_box(slide, "Scalable Fraction (S)", Inches(4), Inches(y+2.6), Inches(3), Inches(0.5), 14, ACCENT_GOLD)
+        
+        # Curve
+        # We can simulate a curve with a diagonal line
+        line = slide.shapes.add_shape(MSO_SHAPE.LINE_INVERSE, Inches(2), Inches(y+2.5), Inches(5), Inches(y+0.2))
+        line.line.color.rgb = ACCENT_CYAN
+        line.line.width = Pt(4)
+        
+        add_text_box(slide, "Collapse Threshold: R_c = 1 / (1-S)", Inches(5), Inches(y+0.5), Inches(4), Inches(1.0), 18, ACCENT_CYAN, True)
+        return y + 3.0
+        
+    elif "single clean structural diagram" in concept:
+        # Four connected boxes
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(1), Inches(y), Inches(2.5), Inches(1), "1. Formal Limits", line_col=ACCENT_GOLD)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(3.6), Inches(y+0.4), Inches(0.4), Inches(0.2), fill_col=TEXT_COLOR, line_col=TEXT_COLOR)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(4.1), Inches(y), Inches(2.5), Inches(1), "2. Bounded Feasibility", line_col=ACCENT_CYAN)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(6.7), Inches(y+0.4), Inches(0.4), Inches(0.2), fill_col=TEXT_COLOR, line_col=TEXT_COLOR)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(7.2), Inches(y), Inches(2.5), Inches(1), "3. Empirical Scaling", line_col=ACCENT_GOLD)
+        add_styled_shape(slide, MSO_SHAPE.RIGHT_ARROW, Inches(9.8), Inches(y+0.4), Inches(0.4), Inches(0.2), fill_col=TEXT_COLOR, line_col=TEXT_COLOR)
+        
+        add_styled_shape(slide, MSO_SHAPE.RECTANGLE, Inches(10.3), Inches(y), Inches(2.5), Inches(1), "4. Hardware Architecture", line_col=ACCENT_CYAN)
+        return y + 1.5
+
+    # Default fallback if not matched
+    add_text_box(slide, concept_text, Inches(1.5), Inches(y), Inches(10), Inches(1.0), 20, ACCENT_GOLD, True)
+    return y + 1.5
+
+
 def create_ai_blueprint_pptx(output_filename):
     prs = Presentation()
-    
-    # Set slide dimensions to 16:9 
     prs.slide_width = Inches(13.33)
     prs.slide_height = Inches(7.5)
 
@@ -186,34 +305,31 @@ def create_ai_blueprint_pptx(output_filename):
     
     # 2. ITERATE OVER REMAINING SLIDES
     for data in slides_data[1:]:
-        slide = prs.slides.add_slide(prs.slide_layouts[6]) # blank layout
+        slide = prs.slides.add_slide(prs.slide_layouts[6]) 
         apply_dark_bg(slide)
         
-        # Add Title (Custom placement)
         add_text_box(slide, data["title"], Inches(0.8), Inches(0.5), Inches(11.73), Inches(1.0), 36, ACCENT_CYAN, True)
         
-        current_y = 1.8 # starting position for bullets
+        current_y = 1.8 
         
         for bullet in data["bullets"]:
             bullet = bullet.strip()
             
-            # Predict vertical size needed (roughly 70 characters fit in 1 line at 24pt scaling)
+            # Sub-routing for Visual Concepts
+            if bullet.startswith("[Visual"):
+                current_y = draw_visual_concept(slide, bullet, current_y)
+                continue
+                
             char_count = len(bullet)
             estimated_lines = max(1, (char_count // 70) + 1)
-            height_needed = estimated_lines * 0.45 + 0.1 # approx 0.45 inches per line
+            height_needed = estimated_lines * 0.45 + 0.1
             
-            # Styling logic based on content
             font_size = 24
             color = TEXT_COLOR
             bold = False
             margin_left = 1.0
             
-            if bullet.startswith("[Visual"):
-                color = ACCENT_GOLD
-                font_size = 20
-                bold = True
-                margin_left = 1.0
-            elif bullet.startswith("Pair") or "Connected Pairs" in bullet:
+            if bullet.startswith("Pair") or "Connected Pairs" in bullet:
                 color = ACCENT_GOLD
                 font_size = 26
                 bold = True
@@ -225,14 +341,15 @@ def create_ai_blueprint_pptx(output_filename):
             else:
                 margin_left = 1.2
             
-            if ":" in bullet and not bullet.startswith("[Visual"):
-                # Make lines with colons slightly taller for reading
+            if ":" in bullet:
                 height_needed += 0.1
                 
-            # Add text box using the user's custom bounding box mechanism
+            stripped_bullet = bullet.replace("Pair 1:", "").replace("Pair 2:", "") if "Pair" in bullet else bullet
+            text_str = "• " + stripped_bullet if not stripped_bullet.startswith("  ") else stripped_bullet
+                
             add_text_box(
                 slide=slide, 
-                text="• " + bullet if not bullet.startswith("[Visual") and not "Pair" in bullet else bullet,
+                text=text_str,
                 left=Inches(margin_left), 
                 top=Inches(current_y), 
                 width=Inches(12.33 - margin_left), 
@@ -242,11 +359,7 @@ def create_ai_blueprint_pptx(output_filename):
                 bold=bold
             )
             
-            current_y += height_needed + 0.1 # Move down for the next sub-box
-            
-            # Prevent pushing off the bottom of the slide
-            if current_y > 7.0:
-                print("Warning: Slide content height exceeded 7 inches.")
+            current_y += height_needed + 0.1
 
     prs.save(output_filename)
     print(f"Presentation saved as {output_filename}")
