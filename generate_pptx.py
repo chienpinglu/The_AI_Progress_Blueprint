@@ -1,5 +1,6 @@
 from pptx import Presentation
 from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 
 # Slide definitions
@@ -120,7 +121,7 @@ slides_data = [
         "bullets": [
             "Shifting Value: AI scaling pushes value-generation away from early fixed pipelines toward learned, late-stage computation (e.g., neural reconstruction, massive rerankers)",
             "Why GPUs Become More Programmable: As S rises, the optimal hardware locus shifts toward generalized, tensor-heavy programmable compute",
-            "The Accelerator Dynamic: AI domain-specific accelerators matter, but they do not simply displace the GPU; they must continually adapt as the dominant value-producing workload evolves"
+            "The Accelerator Dynamic: AI domain-specific accelerators matter, but they do not simply displace the GPU; they must continually displace as the dominant value-producing workload evolves"
         ]
     },
     {
@@ -142,71 +143,113 @@ slides_data = [
     }
 ]
 
-def create_presentation(output_path):
+# Theme Colors from User Code
+BG_COLOR = RGBColor(10, 25, 41)       # Dark Navy
+TEXT_COLOR = RGBColor(240, 240, 240)  # Off-white
+ACCENT_CYAN = RGBColor(0, 255, 255)   # Blueprint Cyan
+ACCENT_GOLD = RGBColor(255, 215, 0)   # Gold/Orange
+
+def apply_dark_bg(slide):
+    """Applies the solid dark navy background to a slide."""
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = BG_COLOR
+
+def add_text_box(slide, text, left, top, width, height, font_size=18, color=TEXT_COLOR, bold=False, align=PP_ALIGN.LEFT):
+    """Helper to add an editable text box with specific styling."""
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = text
+    p.alignment = align
+    p.font.size = Pt(font_size)
+    p.font.color.rgb = color
+    p.font.bold = bold
+    p.font.name = "Arial" 
+    return txBox
+
+def create_ai_blueprint_pptx(output_filename):
     prs = Presentation()
     
-    # 16:9 Aspect ratio
-    prs.slide_width = Inches(13.333)
+    # Set slide dimensions to 16:9 
+    prs.slide_width = Inches(13.33)
     prs.slide_height = Inches(7.5)
+
+    # 1. SPECIAL SLIDE: TITLE SLIDE
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    apply_dark_bg(slide)
     
-    layout = prs.slide_layouts[1] # Title and Content
+    add_text_box(slide, slides_data[0]["title"], Inches(1), Inches(2.0), Inches(11.33), Inches(1.5), 54, ACCENT_CYAN, True, PP_ALIGN.CENTER)
+    add_text_box(slide, slides_data[0]["bullets"][0], Inches(1), Inches(4.0), Inches(11.33), Inches(1), 24, TEXT_COLOR, False, PP_ALIGN.CENTER)
     
-    # Executive Theme Colors
-    BG_COLOR = RGBColor(20, 30, 48)  # Deep Navy Blue
-    TITLE_COLOR = RGBColor(255, 215, 0) # Gold / Accent
-    TEXT_COLOR = RGBColor(240, 240, 240) # Off-white
-    ACCENT_COLOR = RGBColor(100, 150, 255) # Light Blue
-    
-    for slide_data in slides_data:
-        slide = prs.slides.add_slide(layout)
+    # 2. ITERATE OVER REMAINING SLIDES
+    for data in slides_data[1:]:
+        slide = prs.slides.add_slide(prs.slide_layouts[6]) # blank layout
+        apply_dark_bg(slide)
         
-        # Set solid background color
-        background = slide.background
-        fill = background.fill
-        fill.solid()
-        fill.fore_color.rgb = BG_COLOR
+        # Add Title (Custom placement)
+        add_text_box(slide, data["title"], Inches(0.8), Inches(0.5), Inches(11.73), Inches(1.0), 36, ACCENT_CYAN, True)
         
-        # Format Title
-        title_shape = slide.shapes.title
-        title_shape.text = slide_data["title"]
-        title_frame = title_shape.text_frame
-        for p in title_frame.paragraphs:
-            p.font.name = 'Arial'
-            p.font.color.rgb = TITLE_COLOR
-            p.font.bold = True
-            p.font.size = Pt(40)
-            
-        # Format Bullets
-        body_shape = slide.placeholders[1]
-        text_frame = body_shape.text_frame
-        text_frame.word_wrap = True
+        current_y = 1.8 # starting position for bullets
         
-        for i, bullet in enumerate(slide_data["bullets"]):
-            if i == 0:
-                p = text_frame.paragraphs[0]
-            else:
-                p = text_frame.add_paragraph()
+        for bullet in data["bullets"]:
+            bullet = bullet.strip()
             
-            p.text = bullet.strip()
+            # Predict vertical size needed (roughly 70 characters fit in 1 line at 24pt scaling)
+            char_count = len(bullet)
+            estimated_lines = max(1, (char_count // 70) + 1)
+            height_needed = estimated_lines * 0.45 + 0.1 # approx 0.45 inches per line
             
-            # Simple indention logic
+            # Styling logic based on content
+            font_size = 24
+            color = TEXT_COLOR
+            bold = False
+            margin_left = 1.0
+            
             if bullet.startswith("[Visual"):
-                p.level = 1
-                p.font.color.rgb = ACCENT_COLOR
-                p.font.italic = True
-                p.font.size = Pt(20)
-            elif bullet.startswith("  ") or bullet[0].isdigit():
-                p.level = 1
-                p.font.color.rgb = TEXT_COLOR
-                p.font.size = Pt(24)
+                color = ACCENT_GOLD
+                font_size = 20
+                bold = True
+                margin_left = 1.0
+            elif bullet.startswith("Pair") or "Connected Pairs" in bullet:
+                color = ACCENT_GOLD
+                font_size = 26
+                bold = True
+                margin_left = 0.8
+                height_needed += 0.2
+            elif bullet.startswith("Paper"):
+                margin_left = 1.5
+                font_size = 22
             else:
-                p.level = 0
-                p.font.color.rgb = TEXT_COLOR
-                p.font.size = Pt(28)
-            p.font.name = 'Arial'
+                margin_left = 1.2
+            
+            if ":" in bullet and not bullet.startswith("[Visual"):
+                # Make lines with colons slightly taller for reading
+                height_needed += 0.1
+                
+            # Add text box using the user's custom bounding box mechanism
+            add_text_box(
+                slide=slide, 
+                text="• " + bullet if not bullet.startswith("[Visual") and not "Pair" in bullet else bullet,
+                left=Inches(margin_left), 
+                top=Inches(current_y), 
+                width=Inches(12.33 - margin_left), 
+                height=Inches(height_needed), 
+                font_size=font_size, 
+                color=color, 
+                bold=bold
+            )
+            
+            current_y += height_needed + 0.1 # Move down for the next sub-box
+            
+            # Prevent pushing off the bottom of the slide
+            if current_y > 7.0:
+                print("Warning: Slide content height exceeded 7 inches.")
 
-    prs.save(output_path)
-    print(f"Native styled PPTX generated and saved to {output_path}")
+    prs.save(output_filename)
+    print(f"Presentation saved as {output_filename}")
 
-if __name__ == '__main__':
-    create_presentation("The_AI_Progress_Blueprint.pptx")
+if __name__ == "__main__":
+    create_ai_blueprint_pptx("The_AI_Progress_Blueprint.pptx")
