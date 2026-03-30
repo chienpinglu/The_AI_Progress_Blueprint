@@ -5,8 +5,9 @@ from pptx.dml.color import RGBColor
 # Slide definitions
 slides_data = [
     {
-        "title": "The Architecture of AI Progress: Synthesizing the Formal Foundations and Empirical Drivers of Artificial Intelligence",
+        "title": "The Architecture of AI Progress",
         "bullets": [
+            "Synthesizing the Formal Foundations and Empirical Drivers of Artificial Intelligence",
             "A Unified Theoretical Framework: Presenting a cohesive research program that bridges theoretical limits and engineering realities",
             "Two Connected Pairs:",
             "  Pair 1 (The Formal Foundation): Intelligence defined by its outer boundary of computability and inner boundary of polynomial-time feasibility",
@@ -148,19 +149,37 @@ def create_presentation(output_path):
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
     
-    # slide_layouts[1] is Title and Content
-    layout = prs.slide_layouts[1]
+    layout = prs.slide_layouts[1] # Title and Content
+    
+    # Executive Theme Colors
+    BG_COLOR = RGBColor(20, 30, 48)  # Deep Navy Blue
+    TITLE_COLOR = RGBColor(255, 215, 0) # Gold / Accent
+    TEXT_COLOR = RGBColor(240, 240, 240) # Off-white
+    ACCENT_COLOR = RGBColor(100, 150, 255) # Light Blue
     
     for slide_data in slides_data:
         slide = prs.slides.add_slide(layout)
         
-        # Set Title
+        # Set solid background color
+        background = slide.background
+        fill = background.fill
+        fill.solid()
+        fill.fore_color.rgb = BG_COLOR
+        
+        # Format Title
         title_shape = slide.shapes.title
         title_shape.text = slide_data["title"]
-        
-        # Set Bullets
+        title_frame = title_shape.text_frame
+        for p in title_frame.paragraphs:
+            p.font.name = 'Arial'
+            p.font.color.rgb = TITLE_COLOR
+            p.font.bold = True
+            p.font.size = Pt(40)
+            
+        # Format Bullets
         body_shape = slide.placeholders[1]
         text_frame = body_shape.text_frame
+        text_frame.word_wrap = True
         
         for i, bullet in enumerate(slide_data["bullets"]):
             if i == 0:
@@ -171,13 +190,23 @@ def create_presentation(output_path):
             p.text = bullet.strip()
             
             # Simple indention logic
-            if bullet.startswith("  ") or bullet.startswith("[Visual") or bullet[0].isdigit():
+            if bullet.startswith("[Visual"):
                 p.level = 1
+                p.font.color.rgb = ACCENT_COLOR
+                p.font.italic = True
+                p.font.size = Pt(20)
+            elif bullet.startswith("  ") or bullet[0].isdigit():
+                p.level = 1
+                p.font.color.rgb = TEXT_COLOR
+                p.font.size = Pt(24)
             else:
                 p.level = 0
+                p.font.color.rgb = TEXT_COLOR
+                p.font.size = Pt(28)
+            p.font.name = 'Arial'
 
     prs.save(output_path)
-    print(f"Native PPTX generated and saved to {output_path}")
+    print(f"Native styled PPTX generated and saved to {output_path}")
 
 if __name__ == '__main__':
     create_presentation("The_AI_Progress_Blueprint.pptx")
